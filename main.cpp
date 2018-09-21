@@ -12,7 +12,8 @@ int count_alive_neighbors(bool *cell_states, int cell_number);
 
 int main(int argc, char const *argv[])
 {
-    // Used when initialising the field
+    int current_cell_neighbors = 0;
+
     bool is_initialasing = true;
     bool cell_states[X_CELLS * Y_CELLS];
     Cell cells[X_CELLS * Y_CELLS];
@@ -74,21 +75,21 @@ int main(int argc, char const *argv[])
     {
         // Exit init mode
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) &&
-            ((sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) ||
-             (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl)))) {
+                ((sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) ||
+                (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl)))) {
             is_initialasing = false;
         }
 
         // Initializing the field
         if ((is_initialasing) &&
-                            (sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
+                (sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
             // Tag the position where had tapped
             sf::Vector2f mouse_position(sf::Mouse::getPosition(window));
             // Determine the pertinent cell
             if ((mouse_position.x < window_size.x) &&
-                            (mouse_position.x > 0) &&
-                            (mouse_position.y < window_size.y) &&
-                            (mouse_position.y > 0)) {
+                    (mouse_position.x > 0) &&
+                    (mouse_position.y < window_size.y) &&
+                    (mouse_position.y > 0)) {
                 int cell_number = (float)(mouse_position.x / window_size.x) *
                                   X_CELLS + (int)((float)(mouse_position.y /
                                   window_size.y) * Y_CELLS) * X_CELLS;
@@ -97,7 +98,7 @@ int main(int argc, char const *argv[])
                 cells[cell_number].toggle_life();
                 cell_states[cell_number] = !cell_states[cell_number];
             // Sleep for staggering effect elimination
-            sf::sleep(sf::milliseconds(100));
+            sf::sleep(sf::milliseconds(50));
             }
         }
         // // Punch-in
@@ -123,17 +124,22 @@ int main(int argc, char const *argv[])
         for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
             // If not in the init regime, calculate the next tick
             if (!is_initialasing) {
-                while (1) {
-                    int number = 0;
-                    std::cin >> number;
-                    std::cout << count_alive_neighbors(cell_states, number)
-                              << std::endl;
+                current_cell_neighbors = count_alive_neighbors(cell_states, i);
+                if (!(cells[i].is_alive()) && (current_cell_neighbors == 3))
+                    cells[i].make_alive();
+                if ((cells[i].is_alive()) && (current_cell_neighbors < 2) &&
+                        (current_cell_neighbors > 3)) {
+                    cells[i].make_dead();
                 }
             }
 
             if (cells[i].is_active())
                 window.draw(cells[i].cell);
         }
+        // Remember previous tick's states
+        for (int i = 0; i < X_CELLS * Y_CELLS; ++i)
+            cell_states[i] = cells[i].is_alive();
+        sf::sleep(sf::milliseconds(50));
 
         window.display();
 
