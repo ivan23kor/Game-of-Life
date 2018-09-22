@@ -32,7 +32,33 @@ void add_pulsar(Cell *cells, bool *cell_states, int center) {
             pulsar[counter++] = center + X_CELLS * 2 + 1;
             pulsar[counter++] = center + X_CELLS * 3 + 1;
             pulsar[counter++] = center + X_CELLS * 4 + 1;
-            for (int i = 0; i < 24; ++i)
+            
+            pulsar[counter++] = center - X_CELLS * 6 - 2;
+            pulsar[counter++] = center - X_CELLS * 6 - 3;
+            pulsar[counter++] = center - X_CELLS * 6 - 4;
+            pulsar[counter++] = center - X_CELLS * 6 + 2;
+            pulsar[counter++] = center - X_CELLS * 6 + 3;
+            pulsar[counter++] = center - X_CELLS * 6 + 4;
+            pulsar[counter++] = center + X_CELLS * 6 - 2;
+            pulsar[counter++] = center + X_CELLS * 6 - 3;
+            pulsar[counter++] = center + X_CELLS * 6 - 4;
+            pulsar[counter++] = center + X_CELLS * 6 + 2;
+            pulsar[counter++] = center + X_CELLS * 6 + 3;
+            pulsar[counter++] = center + X_CELLS * 6 + 4;
+
+            pulsar[counter++] = center - X_CELLS * 2 - 6;
+            pulsar[counter++] = center - X_CELLS * 3 - 6;
+            pulsar[counter++] = center - X_CELLS * 4 - 6;
+            pulsar[counter++] = center - X_CELLS * 2 + 6;
+            pulsar[counter++] = center - X_CELLS * 3 + 6;
+            pulsar[counter++] = center - X_CELLS * 4 + 6;
+            pulsar[counter++] = center + X_CELLS * 2 - 6;
+            pulsar[counter++] = center + X_CELLS * 3 - 6;
+            pulsar[counter++] = center + X_CELLS * 4 - 6;
+            pulsar[counter++] = center + X_CELLS * 2 + 6;
+            pulsar[counter++] = center + X_CELLS * 3 + 6;
+            pulsar[counter++] = center + X_CELLS * 4 + 6;
+            for (int i = 0; i < 48; ++i)
             {
                 cell_states[pulsar[i]] = true;
                 cells[pulsar[i]].make_alive();
