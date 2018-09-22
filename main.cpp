@@ -1,18 +1,20 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include "src/pattern.hpp"
 #include "src/window.hpp"
-#include "src/cell.hpp"
 #include <sys/time.h>
 #include <iostream>
 #include <unistd.h>
 
 
 int count_alive_neighbors(bool *cell_states, int cell_number);
+int get_cell_number_by_position(const sf::RenderWindow &window);
 
 
 int main(int argc, char const *argv[])
 {
     int current_cell_neighbors = 0;
+    int current_cell_number = 0;
 
     bool is_initialasing = true;
     bool cell_states[X_CELLS * Y_CELLS];
@@ -81,26 +83,29 @@ int main(int argc, char const *argv[])
         }
 
         // Initializing the field
-        if ((is_initialasing) &&
-                (sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
-            // Tag the position where had tapped
-            sf::Vector2f mouse_position(sf::Mouse::getPosition(window));
-            // Determine the pertinent cell
-            if ((mouse_position.x < window_size.x) &&
-                    (mouse_position.x > 0) &&
-                    (mouse_position.y < window_size.y) &&
-                    (mouse_position.y > 0)) {
-                int cell_number = (float)(mouse_position.x / window_size.x) *
-                                  X_CELLS + (int)((float)(mouse_position.y /
-                                  window_size.y) * Y_CELLS) * X_CELLS;
-
-                cells[cell_number].make_active();
-                cells[cell_number].toggle_life();
-                cell_states[cell_number] = !cell_states[cell_number];
-            // Sleep for staggering effect elimination
-            sf::sleep(sf::milliseconds(50));
+        if (is_initialasing) {
+            // Add one cell
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                current_cell_number = get_cell_number_by_position(window);
+                if (current_cell_number != -1) {
+                    cells[current_cell_number].make_active();
+                    cells[current_cell_number].toggle_life();
+                    cell_states[current_cell_number] =
+                                            !cell_states[current_cell_number];
+                    // Sleep for staggering effect elimination
+                    sf::sleep(sf::milliseconds(100));
+                }
+            }
+            // Add pulsar
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) &&
+                    sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
+                current_cell_number = get_cell_number_by_position(window);
+                if (current_cell_number != -1)
+                    add_pulsar(cells, cell_states, current_cell_number);
             }
         }
+
+
         // // Punch-in
         // gettimeofday(&start, NULL);
 
@@ -125,9 +130,12 @@ int main(int argc, char const *argv[])
             // If not in the init regime, calculate the next tick
             if (!is_initialasing) {
                 current_cell_neighbors = count_alive_neighbors(cell_states, i);
-                if (!(cells[i].is_alive()) && (current_cell_neighbors == 3))
+                if (!(cells[i].is_alive()) && (current_cell_neighbors == 3)) {
+                    cells[i].make_active();
                     cells[i].make_alive();
-                if ((cells[i].is_alive()) && (current_cell_neighbors < 2) &&
+                }
+
+                if ((cells[i].is_alive()) && (current_cell_neighbors < 2) ||
                         (current_cell_neighbors > 3)) {
                     cells[i].make_dead();
                 }
@@ -136,10 +144,11 @@ int main(int argc, char const *argv[])
             if (cells[i].is_active())
                 window.draw(cells[i].cell);
         }
+        if (!is_initialasing)
+            sf::sleep(sf::milliseconds(200));
         // Remember previous tick's states
         for (int i = 0; i < X_CELLS * Y_CELLS; ++i)
             cell_states[i] = cells[i].is_alive();
-        sf::sleep(sf::milliseconds(50));
 
         window.display();
 
@@ -212,7 +221,7 @@ int count_alive_neighbors(bool *cell_states, int cell_number) {
                               cell_states[cell_number + X_CELLS - 1] +
                               cell_states[cell_number + X_CELLS];
     // Non-contiguous cells
-    else 
+    else
             alive_neighbors = cell_states[cell_number - X_CELLS - 1] +
                               cell_states[cell_number - X_CELLS] +
                               cell_states[cell_number - X_CELLS + 1] +
@@ -223,4 +232,21 @@ int count_alive_neighbors(bool *cell_states, int cell_number) {
                               cell_states[cell_number - 1];
 
     return alive_neighbors;
+}
+
+int get_cell_number_by_position(const sf::RenderWindow &window) {
+    // Tag the position where had tapped
+    sf::Vector2f mouse_position(sf::Mouse::getPosition(window));
+    sf::Vector2f window_size(window.getSize());
+
+    // Determine the pertinent cell
+    if ((mouse_position.x < window_size.x) &&
+        (mouse_position.x > 0) &&
+        (mouse_position.y < window_size.y) &&
+        (mouse_position.y > 0))
+                return (float)(mouse_position.x / window_size.x) *
+                       X_CELLS + (int)((float)(mouse_position.y /
+                       window_size.y) * Y_CELLS) * X_CELLS;
+    else
+        return -1;
 }
