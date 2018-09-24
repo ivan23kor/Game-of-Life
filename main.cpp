@@ -14,6 +14,10 @@ int main(int argc, char const *argv[])
 {
     int current_cell_neighbors = 0;
     int current_cell_number = 0;
+    int cycle_count = 0;
+
+    // Time measurement variables
+    struct timeval start, end;
 
     bool is_initialasing = true;
     bool cell_states[X_CELLS * Y_CELLS];
@@ -30,7 +34,8 @@ int main(int argc, char const *argv[])
 
     // Window dimensions
     const sf::Vector2f screen_size(my_mode.width, my_mode.height);
-    const sf::Vector2i window_position(screen_size * (float)WINDOW_POSITION_SCALE);
+    const sf::Vector2i window_position(screen_size *
+                                       (float)WINDOW_POSITION_SCALE);
     const sf::Vector2u window_size(screen_size * (float)WINDOW_SIZE_SCALE);
 
     // Apply the dimensions
@@ -68,45 +73,44 @@ int main(int argc, char const *argv[])
     }
 
 
-    // Time measurement variables
-    struct timeval start, start_fps, end, end_fps;
-    gettimeofday(&start_fps, NULL);
+    // Output FPS not more often than 1 second
+    gettimeofday(&start, NULL);
 
     // Start the game loop
     while (window.isOpen())
     {
-        // Exit init mode
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) &&
-                ((sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) ||
-                (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl)))) {
-            is_initialasing = false;
-        }
+        // Init mode
+        {
+            // Exit init mode
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) &&
+                    ((sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) ||
+                    (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl)))) {
+                is_initialasing = false;
+            }
 
-        // Initializing the field
-        if (is_initialasing) {
-            // Add one cell
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-                current_cell_number = get_cell_number_by_position(window);
-                if (current_cell_number != -1) {
-                    cells[current_cell_number].make_active();
-                    cells[current_cell_number].toggle_life();
-                    cell_states[current_cell_number] =
-                                            !cell_states[current_cell_number];
-                    // Sleep for staggering effect elimination
-                    sf::sleep(sf::milliseconds(100));
+            // Initializing the field
+            if (is_initialasing) {
+                // Add one cell
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                    current_cell_number = get_cell_number_by_position(window);
+                    if (current_cell_number != -1) {
+                        cells[current_cell_number].make_active();
+                        cells[current_cell_number].toggle_life();
+                        cell_states[current_cell_number] =
+                            !cell_states[current_cell_number];
+                        // Sleep for staggering effect elimination
+                        sf::sleep(sf::milliseconds(100));
+                    }
+                }
+                // Add pulsar
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) &&
+                        sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
+                    current_cell_number = get_cell_number_by_position(window);
+                    if (current_cell_number != -1)
+                        add_pulsar(cells, cell_states, current_cell_number);
                 }
             }
-            // Add pulsar
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) &&
-                    sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
-                current_cell_number = get_cell_number_by_position(window);
-                if (current_cell_number != -1)
-                    add_pulsar(cells, cell_states, current_cell_number);
-            }
         }
-
-        // Punch-in
-        gettimeofday(&start, NULL);
 
         // Process events
         sf::Event event;
@@ -117,18 +121,11 @@ int main(int argc, char const *argv[])
                 window.close();
         }
 
-        // =================================================
-
-        window.clear();
-        window.draw(white_background);
-        for (int i = 0; i < X_CELLS + Y_CELLS; ++i)
-            window.draw(grid[i], 2, sf::Lines);
-
-        #pragma omp parallel
-        // Cells display
-        for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
-            // If not in the init regime, calculate the next tick
-            if (!is_initialasing) {
+        // Cell logic calculation
+        if (!is_initialasing) {
+            #pragma omp parallel for
+            // Cells display
+            for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
                 current_cell_neighbors = count_alive_neighbors(cell_states, i);
                 if (!(cells[i].is_alive()) && (current_cell_neighbors == 3)) {
                     cells[i].make_active();
@@ -136,29 +133,42 @@ int main(int argc, char const *argv[])
                 }
 
                 if ((cells[i].is_alive()) && (current_cell_neighbors < 2) ||
-                        (current_cell_neighbors > 3)) {
+                        (current_cell_neighbors > 3))
                     cells[i].make_dead();
-                }
             }
-
-            if (cells[i].is_active())
-                window.draw(cells[i].cell);
         }
 
-        #pragma omp parallel
-        // Remember previous tick's states
-        for (int i = 0; i < X_CELLS * Y_CELLS; ++i)
-            cell_states[i] = cells[i].is_alive();
+        // Draw
+        {
+            window.clear();
 
-        if (!is_initialasing) sf::sleep(sf::milliseconds(500));
-        window.display();
+            window.draw(white_background);
+            for (int i = 0; i < X_CELLS + Y_CELLS; ++i)
+                window.draw(grid[i], 2, sf::Lines);
 
-        // Punch-out
-        gettimeofday(&end, NULL);
-        // FPS print
-        double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-                         end.tv_usec - start.tv_usec) / 1.e6;
-        // std::cout << "FPS: " << 1 / delta << std::endl;
+            #pragma omp parallel for
+            for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
+                cell_states[i] = cells[i].is_alive();
+                if (cells[i].is_active())
+                    window.draw(cells[i].cell);
+            }
+            // if (!is_initialasing) sf::sleep(sf::milliseconds(400));
+            
+            window.display();
+        }
+
+        // Time punch-out
+        {
+            cycle_count++;
+            gettimeofday(&end, NULL);
+            double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+                             end.tv_usec - start.tv_usec) / 1.e6;
+            if (delta >= 1.0) {
+                std::cout << "FPS: " << (float)cycle_count / delta << std::endl;
+                cycle_count = 0;
+                gettimeofday(&start, NULL);
+            }
+        }
     }
 
     return 0;
