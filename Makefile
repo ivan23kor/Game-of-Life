@@ -1,10 +1,14 @@
-COMPILE_FLAGS=-lsfml-audio -lsfml-graphics -lsfml-system -lsfml-window
+PARALLEL=-fopenmp
+COMPILE_FLAGS=-lsfml-audio -lsfml-graphics -lsfml-system -lsfml-window\
+																	 $(PARALLEL)
 SRC=src/
 OBJ=obj/
 BIN=bin/game
 
 test: build
 	./$(BIN)
+
+test_parallel: 
 
 build: clean_all
 	g++ -c $(SRC)cell.cpp -o $(OBJ)cell.o $(COMPILE_FLAGS)

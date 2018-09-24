@@ -1,10 +1,11 @@
+#include <iostream>
+#include <omp.h>
+#include <sys/time.h>
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include <unistd.h>
 #include "src/pattern.hpp"
 #include "src/window.hpp"
-#include <sys/time.h>
-#include <iostream>
-#include <unistd.h>
 
 
 int get_cell_number_by_position(const sf::RenderWindow &window);
@@ -12,12 +13,16 @@ int get_cell_number_by_position(const sf::RenderWindow &window);
 
 int main(int argc, char const *argv[])
 {
+    int i = 0;
     int current_cell_neighbors = 0;
     int current_cell_number = 0;
     int cycle_count = 0;
+    int cycle_count_pure = 0;
 
     // Time measurement variables
-    struct timeval start, start1, end, end1;
+    struct timeval start, start_pure, end, end_pure;
+    double delta = 0.0;
+    double delta_pure = 0.0;
 
     bool is_initialasing = true;
     bool cell_states[X_CELLS * Y_CELLS];
@@ -73,7 +78,7 @@ int main(int argc, char const *argv[])
     }
 
 
-    // Output FPS not more often than 1 second
+    // Output FPS not more often than once per second
     gettimeofday(&start, NULL);
 
     // Start the game loop
@@ -104,6 +109,13 @@ int main(int argc, char const *argv[])
                 }
                 // Add pulsar
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) &&
+                        sf::Keyboard::isKeyPressed(sf::Keyboard::P)) {
+                    current_cell_number = get_cell_number_by_position(window);
+                    if (current_cell_number != -1)
+                        add_pentadecathlon(cells, cell_states, current_cell_number);
+                }
+                // Add pulsar
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) &&
                         sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
                     current_cell_number = get_cell_number_by_position(window);
                     if (current_cell_number != -1)
@@ -122,26 +134,32 @@ int main(int argc, char const *argv[])
         }
 
 
-        gettimeofday(&start1, NULL);
         // Cell logic calculation
-        if (!is_initialasing) {
-            #pragma omp parallel for num_threads(40)
-            // Cells display
-            for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
-                current_cell_neighbors = count_alive_neighbors(cell_states, i);
-                if (!(cells[i].is_alive()) && (current_cell_neighbors == 3)) {
-                    cells[i].make_active();
-                    cells[i].make_alive();
-                }
+        {
+            gettimeofday(&start_pure, NULL);
+            if (!is_initialasing) {
+                #pragma omp parallel for private(i)
+                for (i = 0; i < X_CELLS * Y_CELLS; ++i) {
+                    #pragma omp critical
+                    {
+                        current_cell_neighbors = count_alive_neighbors(cell_states, i);
+                        if (!(cells[i].is_alive()) && (current_cell_neighbors == 3)) {
+                            cells[i].make_active();
+                            cells[i].make_alive();
+                        }
 
-                if ((cells[i].is_alive()) && (current_cell_neighbors < 2) ||
-                        (current_cell_neighbors > 3))
-                    cells[i].make_dead();
+                        if ((cells[i].is_alive()) && (current_cell_neighbors < 2) ||
+                                (current_cell_neighbors > 3))
+                            cells[i].make_dead();
+                    }
+                }
+                #pragma omp barrier
             }
+            gettimeofday(&end_pure, NULL);
+            delta_pure = ((end_pure.tv_sec  - start_pure.tv_sec) * 1000000u +
+                            end_pure.tv_usec - start_pure.tv_usec) / 1.e6;
+            std::cout << "Pure FPS: " << (double)1 / delta_pure << std::endl;
         }
-        gettimeofday(&end1, NULL);
-        // std::cout << "FPS: " << 1.e6 / ((end1.tv_sec  - start1.tv_sec) * 1000000u +
-        //                      end1.tv_usec - start1.tv_usec) << std::endl;
 
         // Draw and store cells' states
         {
@@ -151,7 +169,7 @@ int main(int argc, char const *argv[])
             for (int i = 0; i < X_CELLS + Y_CELLS; ++i)
                 window.draw(grid[i], 2, sf::Lines);
 
-            #pragma omp parallel for
+            // #pragma omp parallel for
             for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
                 cell_states[i] = cells[i].is_alive();
                 if (cells[i].is_active())
@@ -162,18 +180,18 @@ int main(int argc, char const *argv[])
             window.display();
         }
 
-        // Time punch-out
-        {
-            cycle_count++;
-            gettimeofday(&end, NULL);
-            double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-                             end.tv_usec - start.tv_usec) / 1.e6;
-            if (delta >= 1.0) {
-                std::cout << "FPS: " << (float)cycle_count / delta << std::endl;
-                cycle_count = 0;
-                gettimeofday(&start, NULL);
-            }
-        }
+        // // Time punch-out
+        // {
+        //     cycle_count++;
+        //     gettimeofday(&end, NULL);
+        //     delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+        //                      end.tv_usec - start.tv_usec) / 1.e6;
+        //     if (delta >= 1.0) {
+        //         std::cout << "FPS: " << (float)cycle_count / delta << std::endl;
+        //         cycle_count = 0;
+        //         gettimeofday(&start, NULL);
+        //     }
+        // }
     }
 
     return 0;
