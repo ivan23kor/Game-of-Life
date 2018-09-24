@@ -1,8 +1,8 @@
 #include <SFML/Graphics.hpp>
 #include "window.hpp"
 
-#define X_CELLS 170
-#define Y_CELLS 90
+#define X_CELLS 160
+#define Y_CELLS 80
 
 class Cell {
 // Represents one living entity

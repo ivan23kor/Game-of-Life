@@ -138,7 +138,7 @@ int main(int argc, char const *argv[])
             }
         }
 
-        // Draw
+        // Draw and store cells' states
         {
             window.clear();
 
