@@ -17,7 +17,7 @@ int main(int argc, char const *argv[])
     int cycle_count = 0;
 
     // Time measurement variables
-    struct timeval start, end;
+    struct timeval start, start1, end, end1;
 
     bool is_initialasing = true;
     bool cell_states[X_CELLS * Y_CELLS];
@@ -121,9 +121,11 @@ int main(int argc, char const *argv[])
                 window.close();
         }
 
+
+        gettimeofday(&start1, NULL);
         // Cell logic calculation
         if (!is_initialasing) {
-            #pragma omp parallel for
+            #pragma omp parallel for num_threads(40)
             // Cells display
             for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
                 current_cell_neighbors = count_alive_neighbors(cell_states, i);
@@ -137,6 +139,9 @@ int main(int argc, char const *argv[])
                     cells[i].make_dead();
             }
         }
+        gettimeofday(&end1, NULL);
+        // std::cout << "FPS: " << 1.e6 / ((end1.tv_sec  - start1.tv_sec) * 1000000u +
+        //                      end1.tv_usec - start1.tv_usec) << std::endl;
 
         // Draw and store cells' states
         {
@@ -152,7 +157,7 @@ int main(int argc, char const *argv[])
                 if (cells[i].is_active())
                     window.draw(cells[i].cell);
             }
-            // if (!is_initialasing) sf::sleep(sf::milliseconds(400));
+            if (!is_initialasing) sf::sleep(sf::milliseconds(400));
             
             window.display();
         }

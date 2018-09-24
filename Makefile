@@ -1,4 +1,3 @@
-BIN=game
 COMPILE_FLAGS=-lsfml-audio -lsfml-graphics -lsfml-system -lsfml-window
 SRC=src/
 OBJ=obj/
