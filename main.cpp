@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 
-int count_alive_neighbors(bool *cell_states, int cell_number);
 int get_cell_number_by_position(const sf::RenderWindow &window);
 
 
@@ -69,8 +68,9 @@ int main(int argc, char const *argv[])
     }
 
 
-    // // Time measurement variables
-    // struct timeval start, end;
+    // Time measurement variables
+    struct timeval start, start_fps, end, end_fps;
+    gettimeofday(&start_fps, NULL);
 
     // Start the game loop
     while (window.isOpen())
@@ -105,9 +105,8 @@ int main(int argc, char const *argv[])
             }
         }
 
-
-        // // Punch-in
-        // gettimeofday(&start, NULL);
+        // Punch-in
+        gettimeofday(&start, NULL);
 
         // Process events
         sf::Event event;
@@ -125,6 +124,7 @@ int main(int argc, char const *argv[])
         for (int i = 0; i < X_CELLS + Y_CELLS; ++i)
             window.draw(grid[i], 2, sf::Lines);
 
+        #pragma omp parallel
         // Cells display
         for (int i = 0; i < X_CELLS * Y_CELLS; ++i) {
             // If not in the init regime, calculate the next tick
@@ -144,94 +144,24 @@ int main(int argc, char const *argv[])
             if (cells[i].is_active())
                 window.draw(cells[i].cell);
         }
-        if (!is_initialasing)
-            sf::sleep(sf::milliseconds(200));
+
+        #pragma omp parallel
         // Remember previous tick's states
         for (int i = 0; i < X_CELLS * Y_CELLS; ++i)
             cell_states[i] = cells[i].is_alive();
 
+        if (!is_initialasing) sf::sleep(sf::milliseconds(500));
         window.display();
 
-        // // Punch-out
-        // gettimeofday(&end, NULL);
-        // // FPS print
-        // double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-        //                  end.tv_usec - start.tv_usec) / 1.e6;
+        // Punch-out
+        gettimeofday(&end, NULL);
+        // FPS print
+        double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+                         end.tv_usec - start.tv_usec) / 1.e6;
         // std::cout << "FPS: " << 1 / delta << std::endl;
     }
 
     return 0;
-}
-
-int count_alive_neighbors(bool *cell_states, int cell_number) {
-    int alive_neighbors = 0;
-
-    // Four corner cells
-    switch(cell_number) {
-        // Left upper
-        case 0:
-            return cell_states[cell_number + 1] +
-                   cell_states[cell_number + X_CELLS] +
-                   cell_states[cell_number + X_CELLS + 1];
-        // Right upper
-        case X_CELLS - 1:
-            return cell_states[cell_number - 1] +
-                   cell_states[cell_number + X_CELLS] +
-                   cell_states[cell_number + X_CELLS - 1];
-        // Left bottom
-        case X_CELLS * (Y_CELLS - 1):
-            return cell_states[cell_number + 1] +
-                   cell_states[cell_number - X_CELLS] +
-                   cell_states[cell_number - X_CELLS + 1];
-        // Right bottom
-        case X_CELLS * Y_CELLS - 1:
-            return cell_states[cell_number - 1] +
-                   cell_states[cell_number - X_CELLS] +
-                   cell_states[cell_number - X_CELLS - 1];
-        default:
-            break;
-    }
-
-    // Other upper-horizontal cells
-    if (cell_number < X_CELLS)
-            alive_neighbors = cell_states[cell_number - 1] +
-                              cell_states[cell_number + X_CELLS - 1] +
-                              cell_states[cell_number + X_CELLS] +
-                              cell_states[cell_number + X_CELLS + 1] +
-                              cell_states[cell_number + 1];
-    // Other bottom-horizontal cells
-    else if (cell_number / X_CELLS == Y_CELLS - 1)
-            alive_neighbors = cell_states[cell_number - 1] +
-                              cell_states[cell_number - X_CELLS - 1] +
-                              cell_states[cell_number - X_CELLS] +
-                              cell_states[cell_number - X_CELLS + 1] +
-                              cell_states[cell_number + 1];
-    // Other left-vertical cells
-    else if (cell_number % X_CELLS == 0)
-            alive_neighbors = cell_states[cell_number - X_CELLS] +
-                              cell_states[cell_number - X_CELLS + 1] +
-                              cell_states[cell_number + 1] +
-                              cell_states[cell_number + X_CELLS + 1] +
-                              cell_states[cell_number + X_CELLS];
-    // Other right-vertical cells
-    else if (cell_number % X_CELLS == Y_CELLS - 1)
-            alive_neighbors = cell_states[cell_number - X_CELLS] +
-                              cell_states[cell_number - X_CELLS - 1] +
-                              cell_states[cell_number - 1] +
-                              cell_states[cell_number + X_CELLS - 1] +
-                              cell_states[cell_number + X_CELLS];
-    // Non-contiguous cells
-    else
-            alive_neighbors = cell_states[cell_number - X_CELLS - 1] +
-                              cell_states[cell_number - X_CELLS] +
-                              cell_states[cell_number - X_CELLS + 1] +
-                              cell_states[cell_number + 1] +
-                              cell_states[cell_number + X_CELLS + 1] +
-                              cell_states[cell_number + X_CELLS] +
-                              cell_states[cell_number + X_CELLS - 1] +
-                              cell_states[cell_number - 1];
-
-    return alive_neighbors;
 }
 
 int get_cell_number_by_position(const sf::RenderWindow &window) {

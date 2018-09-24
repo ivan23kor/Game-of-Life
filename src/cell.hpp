@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include "window.hpp"
 
 #define X_CELLS 160
 #define Y_CELLS 80
@@ -20,3 +21,5 @@ public:
     void make_active();
     void make_inactive();
 };
+
+int count_alive_neighbors(bool *cell_states, int cell_number);
