@@ -5,11 +5,6 @@ SRC=src/
 OBJ=obj/
 BIN=bin/game
 
-test: build
-	./$(BIN)
-
-test_parallel: 
-
 build: clean_all
 	g++ -c $(SRC)cell.cpp -o $(OBJ)cell.o $(COMPILE_FLAGS)
 	g++ -c $(SRC)pattern.cpp -o $(OBJ)pattern.o $(COMPILE_FLAGS)

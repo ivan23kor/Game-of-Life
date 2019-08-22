@@ -8,6 +8,8 @@
 #include "src/window.hpp"
 
 
+#define SLEEP_TIME 100
+
 int get_cell_number_by_position(const sf::RenderWindow &window);
 
 
@@ -69,11 +71,11 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < Y_CELLS; ++i)
     {
         grid[X_CELLS + i][0] = sf::Vertex(sf::Vector2f(
-                                                0, i * 1 / (float)Y_CELLS));
+            0, i * 1 / (float)Y_CELLS));
         grid[X_CELLS + i][0].color = sf::Color::Black;
 
         grid[X_CELLS + i][1] = sf::Vertex(sf::Vector2f(
-                                                1, i * 1 / (float)Y_CELLS));
+            1, i * 1 / (float)Y_CELLS));
         grid[X_CELLS + i][1].color = sf::Color::Black;
     }
 
@@ -175,7 +177,7 @@ int main(int argc, char const *argv[])
                 if (cells[i].is_active())
                     window.draw(cells[i].cell);
             }
-            if (!is_initialasing) sf::sleep(sf::milliseconds(400));
+            if (!is_initialasing) sf::sleep(sf::milliseconds(SLEEP_TIME));
             
             window.display();
         }
